@@ -1,0 +1,40 @@
+SET search_path TO CustomerOrders;
+
+with cust_orders as (
+select o.order_id, o.order_date,
+p.product_id,
+oi.order_item_id,
+max(order_date) over (partition by product_id) as product_last_order_date,
+dense_rank() over (partition by product_id order by order_date) as product_order_date_ranking
+from order_items oi
+left join products p on oi.order_item_product_id = p.product_id 
+left join orders o on oi.order_item_order_id = o.order_id
+and o.order_status in ('COMPLETE','CLOSED')
+)
+
+
+select co.order_date, co.product_id,
+count(co.order_item_id) over (partition by co.product_id) as number_of_items,
+max(product_order_date_ranking) over (partition by co.product_id) as number_of_days_with_sales,
+extract(day from (NOW() - co.product_last_order_date)) as dates_ceased
+from cust_orders co
+inner join  
+(select product_id, count(distinct order_date) as num_days
+from cust_orders
+where (order_date > (SELECT NOW() - INTERVAL '60 DAY'))
+group by product_id
+having count(distinct order_date)>30) vas 
+on co.product_id = vas.product_id
+where co.product_id
+not in (
+select product_id
+from cust_orders
+where (order_date > (SELECT NOW() - INTERVAL '7 DAY'))
+);
+
+
+
+#What would be the best way to implment this in Date/Product_id/Sum(sales)... type Data Mart with #other sales information (i.e. without filters and group by)?
+
+#Additional business logic can be stored in partitioned manner with foreign keys so that
+#no need for filters and group by
