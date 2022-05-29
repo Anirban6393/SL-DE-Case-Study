@@ -71,4 +71,4 @@ CREATE TABLE IF NOT EXISTS order_items (
   PRIMARY KEY (order_item_product_id,order_item_id),
   FOREIGN KEY (order_item_order_id) REFERENCES orders(order_id),
   FOREIGN KEY (order_item_product_id) REFERENCES products(product_id)	
-) PARTITION BY RANGE(order_item_product_id,order_item_id);
+);
